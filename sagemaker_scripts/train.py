@@ -1,11 +1,10 @@
 import numpy as np
 import mxnet as mx
-from mxnet.metric import MSE
 from mxnet import gluon
 import glob
-import logging
 import argparse
 import os
+from six import BytesIO, StringIO
 
 out = 10
 
@@ -44,10 +43,12 @@ class STSAE(gluon.nn.HybridBlock):
         x = self.decoder(x)
 
         return x
-ctx = mx.cpu()   
+
+ctx = mx.cpu()  
+
 def train(batch_size, epochs, learning_rate, weight_decay):
     
-    train = np.load("../input/data/train/y")
+    train = np.load("../input/data/train/input_data.npy")   
     dataset = gluon.data.ArrayDataset(mx.nd.array(train, dtype=np.float32))
     dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size, last_batch='rollover',shuffle=True)
     
@@ -74,38 +75,27 @@ def train(batch_size, epochs, learning_rate, weight_decay):
             loss.backward()
             optimizer.step(batch_size)
             print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, epochs, mx.nd.mean(loss).asscalar()))
-            
-        #vall_acc = test(model, batch_size)
-        #print('validation=%f' %vall_acc)
+       
     save(model, os.environ['SM_MODEL_DIR'])   
     return model
 
-def test(model, batch_size): 
-    
-    test = np.load("../input/data/test/y")
-    test_dataset = gluon.data.ArrayDataset(mx.nd.array(test, dtype=np.float32))
-    test_dataloader = gluon.data.DataLoader(test_dataset, batch_size=10, last_batch='rollover')   
-
-    l2 = gluon.loss.L2Loss()
-    loss_avg = 0
-    
-    for i, test_img in enumerate(test_dataloader):
-        
-        test_img = test_img.as_in_context(ctx)
-        output = model(test_img)
-        loss = l2(test_img, output)
-        loss_avg = loss_avg*i/(i+1) + mx.nd.mean(loss).asscalar()/(i+1)
-    return loss_avg
-
 def save(model, model_dir):
-    #model.save_params('%s/model.params' % model_dir)
-    model.export("model", epoch=0)
-#def model_fn(model_dir):
-    
-    #model = STSAE()
-    #model.load_params('%s/model.params' % model_dir, ctx=mx.cpu())
+    model.save_parameters('%s/model.params' % model_dir)
 
-    
+def model_fn(model_dir):
+    model = STSAE()
+    model.load_parameters("%s/model.params" %model_dir, ctx=ctx)
+    return model
+
+#def transform_fn(model, data, content_type, accept):
+#    tmp = np.load(StringIO(data))
+#    mx_nd_array = mx.nd.array(data)
+#    mx_nd_array = mx_nd_array.as_in_context(ctx)
+#    output = model(mx_nd_array)
+#    np_array = output.asnumpy()
+#    np.save("output", np_array)
+#    f = open("output.npy")
+#    return f.read()
     
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -122,11 +112,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     train(args.batch_size, args.epochs, args.learning_rate, args.wd)
-    
-#def model_fn(model_dir):
-    
-#def transform_fn(model, input_data, content_type, accept):
-    
+        
 #def input_fn(input_data, content_type):
     
 #def predict_fn(block, array):
