@@ -261,7 +261,7 @@ class STSAE(gluon.nn.HybridBlock):
         return x
 ```
 
-
+The input dataset needs to be modified: instead of 1 channel, it contains now ```n``` channels.  
 ```python
 files = sorted(glob.glob('UCSD_Anomaly_Dataset.v1p2/UCSDped1/Train/*/*'))
 
@@ -278,3 +278,5 @@ for filename in range(0, len(files)):
       idx = idx + 1
       i = 0
 ```
+Following shows, that the STSAE better detects anomalies such as persons on bicycles or skateboards. 
+<img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/stsae.gif" width="800" height="300">
