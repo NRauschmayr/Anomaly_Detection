@@ -222,7 +222,6 @@ One problem of the standard CAE is that it does not take into account the tempor
 
 
 ```python
-n = 10
 
 class SpatioTemporalAE(gluon.nn.HybridBlock):
     def __init__(self):
@@ -251,7 +250,7 @@ class SpatioTemporalAE(gluon.nn.HybridBlock):
                 self.decoder.add(gluon.nn.BatchNorm())
                 self.decoder.add(gluon.nn.HybridLambda(lambda F, x: F.UpSampling(x, scale=2, sample_type='nearest')))
                 self.decoder.add(gluon.nn.BatchNorm())
-                self.decoder.add(gluon.nn.Conv2DTranspose(channels=n, kernel_size=15, strides=4, activation='sigmoid'))
+                self.decoder.add(gluon.nn.Conv2DTranspose(channels=10, kernel_size=15, strides=4, activation='sigmoid'))
 
 
     def hybrid_forward(self, F, x):
@@ -287,11 +286,6 @@ We can enhance the previous model by using convolutions LSTM cells. ConvLSTMs ha
 using Spatiotemporal Autoencoder](https://arxiv.org/pdf/1701.01546.pdf) describes an autoencoder model, where 10 input frames are stacked together in one cube. They are processed by 2 convolutionals layers (encoder), followed by the temporal enocder/decoder that consists of 3 convolutional LSTMs and last 2 deconvolutional layers that reconstruct the output frames.
 
 ```python
-time =10
-ctx = mx.gpu()
-num_epochs = 20
-batch_size = 8
-
 class ConvLSTMAE(gluon.nn.HybridBlock):
     def __init__(self, **kwargs):
         super(ConvLSTMAE, self).__init__(**kwargs)
@@ -308,7 +302,7 @@ class ConvLSTMAE(gluon.nn.HybridBlock):
 
           self.decoder =  gluon.nn.HybridSequential()
           self.decoder.add(gluon.nn.Conv2DTranspose(channels=128, kernel_size=5, strides=2, activation='relu'))
-          self.decoder.add(gluon.nn.Conv2DTranspose(channels=time, kernel_size=11, strides=4, activation='sigmoid'))
+          self.decoder.add(gluon.nn.Conv2DTranspose(channels=10, kernel_size=11, strides=4, activation='sigmoid'))
 
     def hybrid_forward(self, F, x, states=None, **kwargs):
         x = self.encoder(x)
@@ -316,7 +310,10 @@ class ConvLSTMAE(gluon.nn.HybridBlock):
         x = self.decoder(x)
 
         return x, states
+```
 
+When we initialize the model, we have to create the intital state vector for the LSTMs.
+```python
 model = ConvLSTMAE()
 model.hybridize()
 model.collect_params().initialize(mx.init.Xavier(), ctx=mx.gpu())
