@@ -1,4 +1,4 @@
-## Detecting Anomalies in Images  
+# Detecting Anomalies in Images  
 
 Anomaly detection deals with the problem of finding data items that do not follow the patterns of the majority of data. The task is to distinguish good items from anomalous items. This can be defined as a binary classification problem and as such solved with supervised learning techniques. However, classes can be highly imbalanced.
 
@@ -31,7 +31,7 @@ if not os.path.isfile("UCSD_Anomaly_Dataset.tar.gz"):
   tar.close()
 ```
 
-### Convolutional Autoencoder (CAE)
+## Convolutional Autoencoder (CAE)
 
 Let's define the network structure. The encoder consists of two convolutional and two MaxPooling layers. Encoder and Decoder are connected by a fully connected layer. The larger this bottleneck, the more information can be reconstructed. The decoder consists of two Upsampling layers and two Deconvolutions.
 
@@ -207,26 +207,25 @@ for image in dataloader:
     break
 ```
 
-##### Example Video (with Dense layer):
+#### Example Video (with Dense layer):
 <img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/autoencoder_dense.gif" width="800" height="300">
 
 As we can see in the video, the golf cart is successfully identified as an anomaly. The autoencoder has learned to reconstruct human beings well, but it struggles with objects that it has not seen during training.
 The dimension of the bottleneck layer will influence how much information is transmitted between encoder and decoder. If we set it too large or even remove it, then images will be reconstructed quite well. In the video below we removed the layer, so information flows from the second MaxPooling layer directly to the first Upsampling layer. 
 
-##### Example Video (without Dense layer):
+#### Example Video (without Dense layer):
 <img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/autoencoder_no_dense.gif" width="800" height="300">
 As we can see the network can reconstruct persons and other objects much better than the network with bottleneck layer. But it also becomes more challenging to detect anomalies.
 
-### Spatio-Temporal Stacked frame AutoEncoder  (STSAE)
-One problem of the standard CAE is that it does not take into account the temporal aspect of sequence of images. As such identifying certain anomalies like a person moving faster than the average cannot be easily detected. For instance in the video above the person on skateboard nor the person on the bicycle are detected as an anomaly. The paper ["Learning Temporal Regularity in Video Sequences"](https://arxiv.org/abs/1604.04574) describes an autoencoder that can also learn spatio-temporal structures in datasets. Instead of considering only one image at a time we consider now `n` images at a time. CAE takes the input in the form of `[batch_size, 1, width, height]`) and STSAE takes `[batch_size, n, width, height]`.
+## Spatio-Temporal Stacked Frame AutoEncoder 
+One problem of the standard CAE is that it does not take into account the temporal aspect of sequence of images. As such identifying certain anomalies like a person moving faster than the average cannot be easily detected. For instance in the video above the person on skateboard nor the person on the bicycle are detected as an anomaly. The paper ["Learning Temporal Regularity in Video Sequences"](https://arxiv.org/abs/1604.04574) describes an autoencoder that can also learn spatio-temporal structures in datasets. Instead of considering only one image at a time we consider now `n` images at a time. CAE takes the input in the form of `[batch_size, 1, width, height]`) and the spatio-temporal autoencoder takes `[batch_size, n, width, height]`.
 
 
 ```python
-n = 10
 
-class STSAE(gluon.nn.HybridBlock):
+class SpatioTemporalAE(gluon.nn.HybridBlock):
     def __init__(self):
-        super(STSAE, self).__init__()
+        super(SpatioTemporalAE, self).__init__()
         with self.name_scope():
             self.encoder = gluon.nn.HybridSequential(prefix="encoder")
             with self.encoder.name_scope():
@@ -251,7 +250,7 @@ class STSAE(gluon.nn.HybridBlock):
                 self.decoder.add(gluon.nn.BatchNorm())
                 self.decoder.add(gluon.nn.HybridLambda(lambda F, x: F.UpSampling(x, scale=2, sample_type='nearest')))
                 self.decoder.add(gluon.nn.BatchNorm())
-                self.decoder.add(gluon.nn.Conv2DTranspose(channels=n, kernel_size=15, strides=4, activation='sigmoid'))
+                self.decoder.add(gluon.nn.Conv2DTranspose(channels=10, kernel_size=15, strides=4, activation='sigmoid'))
 
 
     def hybrid_forward(self, F, x):
@@ -278,5 +277,46 @@ for filename in range(0, len(files)):
       idx = idx + 1
       i = 0
 ```
-Following shows, that the STSAE better detects anomalies such as persons on bicycles or skateboards. 
+Following shows, that this autoencoder better detects anomalies such as persons on bicycles or skateboards. 
 <img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/stsae.gif" width="800" height="300">
+
+## Spatio-Temporal Autoencoder with Convolutional LSTMs 
+
+We can enhance the previous model by using convolutions LSTM cells. ConvLSTMs have proven to be effective in video processing, where they can be used to predict next video frames. The paper [Abnormal Event Detection in Videos
+using Spatiotemporal Autoencoder](https://arxiv.org/pdf/1701.01546.pdf) describes an autoencoder model, where 10 input frames are stacked together in one cube. They are processed by 2 convolutionals layers (encoder), followed by the temporal enocder/decoder that consists of 3 convolutional LSTMs and last 2 deconvolutional layers that reconstruct the output frames.
+
+```python
+class ConvLSTMAE(gluon.nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(ConvLSTMAE, self).__init__(**kwargs)
+        with self.name_scope():
+
+          self.encoder = gluon.nn.HybridSequential()
+          self.encoder.add(gluon.nn.Conv2D(128, kernel_size=11, strides=4, activation='relu'))
+          self.encoder.add(gluon.nn.Conv2D(64, kernel_size=5, strides=2, activation='relu'))
+
+          self.temporal_encoder = gluon.rnn.HybridSequentialRNNCell()
+          self.temporal_encoder.add(gluon.contrib.rnn.Conv2DLSTMCell((64,26,26), 64, 3, 3, i2h_pad=1))
+          self.temporal_encoder.add(gluon.contrib.rnn.Conv2DLSTMCell((64,26,26), 32, 3, 3, i2h_pad=1))
+          self.temporal_encoder.add(gluon.contrib.rnn.Conv2DLSTMCell((32,26,26), 64, 3, 3, i2h_pad=1))
+
+          self.decoder =  gluon.nn.HybridSequential()
+          self.decoder.add(gluon.nn.Conv2DTranspose(channels=128, kernel_size=5, strides=2, activation='relu'))
+          self.decoder.add(gluon.nn.Conv2DTranspose(channels=10, kernel_size=11, strides=4, activation='sigmoid'))
+
+    def hybrid_forward(self, F, x, states=None, **kwargs):
+        x = self.encoder(x)
+        x, states = self.temporal_encoder(x, states)
+        x = self.decoder(x)
+
+        return x, states
+```
+
+When we initialize the model, we have to create the intital state vector for the LSTMs.
+```python
+model = ConvLSTMAE()
+model.hybridize()
+model.collect_params().initialize(mx.init.Xavier(), ctx=mx.gpu())
+states = model.temporal_encoder.begin_state(batch_size=batch_size, ctx=ctx)
+```
+
