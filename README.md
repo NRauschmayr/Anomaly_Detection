@@ -277,7 +277,7 @@ for filename in range(0, len(files)):
       idx = idx + 1
       i = 0
 ```
-Following shows, that this autoencoder better detects anomalies such as persons on bicycles or skateboards. 
+Following shows, that this autoencoder can more accurately detect anomalies such as persons on bicycles or skateboards. 
 <img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/stsae.gif" width="800" height="300">
 
 ## Spatio-Temporal Autoencoder with Convolutional LSTMs 
@@ -319,4 +319,7 @@ model.hybridize()
 model.collect_params().initialize(mx.init.Xavier(), ctx=mx.gpu())
 states = model.temporal_encoder.begin_state(batch_size=batch_size, ctx=ctx)
 ```
+The following video shows the results of the spatio-termporal autoencoder based on convolutional LSTM cells. It achieves very similar results as the previous model.
+<img src="https://github.com/NRauschmayr/Anomaly_Detection/raw/master/data/convLSTMAE.gif" width="800" height="300">
+
 
