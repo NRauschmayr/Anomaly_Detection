@@ -4,8 +4,8 @@ import convLSTMAE
 import utils
 import mxnet as mx
 
-train_directory = "../UCSD_Anomaly_Dataset.v1p2/UCSDped1/Train/*/*"
-test_directory  = "../UCSD_Anomaly_Dataset.v1p2/UCSDped1/Test/Test022/*"
+train_directory = "UCSD_Anomaly_Dataset.v1p2/UCSDped1/Train/*/*"
+test_directory  = "UCSD_Anomaly_Dataset.v1p2/UCSDped1/Test/*/*"
 ctx = mx.gpu()
 batch_size = 8
 num_epochs = 1
