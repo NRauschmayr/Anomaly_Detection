@@ -83,10 +83,6 @@ Images from the folder `UCSDped1` have the format 158x238 pixels. They are resca
 
 
 ```python
-def img_transform(data):
-    data = data.transpose((2, 0, 1))
-    return (data.astype('float32') / 255)
-
 files = sorted(glob.glob('UCSD_Anomaly_Dataset.v1p2/UCSDped1/Train/*/*'))
 a = np.zeros((len(files),1,100,100))
 
