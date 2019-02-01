@@ -223,9 +223,9 @@ One problem of the standard CAE is that it does not take into account the tempor
 
 ```python
 
-class SpatioTemporalAE(gluon.nn.HybridBlock):
+class convSTAE(gluon.nn.HybridBlock):
     def __init__(self):
-        super(SpatioTemporalAE, self).__init__()
+        super(convSTAE, self).__init__()
         with self.name_scope():
             self.encoder = gluon.nn.HybridSequential(prefix="encoder")
             with self.encoder.name_scope():

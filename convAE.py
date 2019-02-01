@@ -2,7 +2,7 @@ import mxnet as mx
 from mxnet import gluon
 import utils
 
-# Convolutional Autoencoder
+# convolutional autoencoder
 class ConvolutionalAutoencoder(gluon.nn.HybridBlock):
     def __init__(self):
         super(ConvolutionalAutoencoder, self).__init__()
